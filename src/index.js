@@ -48,7 +48,6 @@ function connectWebSocket() {
       proxyRes.on('data', chunk => chunks.push(chunk));
       proxyRes.on('end', () => {
         const body = Buffer.concat(chunks);
-        console.log(body.toString());
         ws.send(JSON.stringify({
           type: 'response',
           id: data.id,
