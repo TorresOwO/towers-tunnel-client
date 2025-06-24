@@ -15,7 +15,9 @@ function connectWebSocket() {
     reconnectTimer = null;
   }
 
-  ws = new WebSocket('ws://shm.sytes.net/ws-tunnel');
+  ws = new WebSocket('ws://shm.sytes.net/ws-tunnel', {
+    maxPayload: 10 * 1024 * 1024 * 1024,
+  });
 
   ws.on('open', () => {
     ws.send(JSON.stringify({ type: 'register', id: PLACA_ID }));
