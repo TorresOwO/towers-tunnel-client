@@ -1,9 +1,31 @@
+const fs = require('fs');
+const path = require('path');
+
+// Check if .env file exists, if not create it and exit
+const envPath = path.join(__dirname, '..', '.env');
+if (!fs.existsSync(envPath)) {
+  const defaultEnvContent = `# Configuración del cliente de túnel
+CLIENT_ID=cliente_tunnel
+API_LOCAL_PORT=8000
+RECONNECT_TIMEOUT=10000
+
+# Configuración del servidor WebSocket
+WS_SERVER_URL=ws://shm.sytes.net/ws-tunnel`;
+  
+  fs.writeFileSync(envPath, defaultEnvContent);
+  console.log('📄 Archivo .env creado con configuración inicial.');
+  console.log('📝 Por favor, edita el archivo .env con tu configuración y ejecuta el programa nuevamente.');
+  process.exit(0);
+}
+
+require('dotenv').config();
 const WebSocket = require('ws');
 const http = require('http');
 
-const PLACA_ID = 'torre';
-const API_LOCAL_PORT = 8000;
-const RECONNECT_TIMEOUT = 10000; // 10 seconds in milliseconds
+const CLIENT_ID = process.env.CLIENT_ID || 'torre';
+const API_LOCAL_PORT = parseInt(process.env.API_LOCAL_PORT) || 8000;
+const RECONNECT_TIMEOUT = parseInt(process.env.RECONNECT_TIMEOUT) || 10000; // 10 seconds in milliseconds
+const WS_SERVER_URL = process.env.WS_SERVER_URL || 'ws://shm.sytes.net/ws-tunnel';
 
 let ws;
 let reconnectTimer;
@@ -15,20 +37,21 @@ function connectWebSocket() {
     reconnectTimer = null;
   }
 
-  ws = new WebSocket('ws://shm.sytes.net/ws-tunnel', {
+  ws = new WebSocket(WS_SERVER_URL, {
     maxPayload: 10 * 1024 * 1024 * 1024,
   });
 
   ws.on('open', () => {
-    ws.send(JSON.stringify({ type: 'register', id: PLACA_ID }));
-    console.log('📡 Conectado al túnel como:', PLACA_ID);
+    ws.send(JSON.stringify({ type: 'register', id: CLIENT_ID }));
+    console.log(`📡 Conectado al túnel como ${CLIENT_ID}`);
+    console.log(`🔌 Apuntando al puerto local ${API_LOCAL_PORT}`);
   });
 
   ws.on('message', (raw) => {
     const data = JSON.parse(raw);
     if (data.type !== 'request') return;
 
-    console.log('🔄 Solicitud recibida:', data.path);
+    console.log(`🔄 Solicitud recibida: ${data.path}`);
 
     // Clean headers to prevent issues
     const headers = { ...data.headers };
