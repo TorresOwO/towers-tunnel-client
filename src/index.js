@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-const PLACA_ID = 'placa1';
+const PLACA_ID = 'torre';
 const API_LOCAL_PORT = 8000;
 const RECONNECT_TIMEOUT = 10000; // 10 seconds in milliseconds
 
@@ -47,7 +47,13 @@ function connectWebSocket() {
 
     const proxyReq = http.request(options, (proxyRes) => {
       const chunks = [];
-      proxyRes.on('data', chunk => chunks.push(chunk));
+      proxyRes.on('data', chunk => {
+        try {
+          chunks.push(chunk);
+        } catch (error) {
+          console.error('Error al procesar el chunk:', error.message);
+        }
+      });
       proxyRes.on('end', () => {
         const body = Buffer.concat(chunks);
         ws.send(JSON.stringify({
@@ -79,7 +85,21 @@ function connectWebSocket() {
     });
 
     if (data.body) {
-      proxyReq.write(data.body);
+      // Check if data.body is a serialized Buffer object
+      if (data.body.type === 'Buffer' && Array.isArray(data.body.data)) {
+        // Reconstruct Buffer from serialized data
+        const buffer = Buffer.from(data.body.data);
+        proxyReq.write(buffer);
+      } else if (typeof data.body === 'string') {
+        // Handle string data
+        proxyReq.write(data.body);
+      } else if (Buffer.isBuffer(data.body)) {
+        // Handle actual Buffer
+        proxyReq.write(data.body);
+      } else {
+        // Fallback: convert to string
+        proxyReq.write(String(data.body));
+      }
     }
 
     proxyReq.end();
